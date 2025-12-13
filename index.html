@@ -122,10 +122,9 @@
     <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
     <script>
         // Configuration
-        const CLOUDINARY_CLOUD_NAME = 'dxxxxx'; // Your Cloudinary cloud name
-        const CLOUDINARY_UPLOAD_PRESET = 'ml_default'; // Your upload preset
-        const SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL';
-        const N8N_WEBHOOK_URL = 'https://your-n8n.cloud/webhook/video-upload';
+        const CLOUDINARY_CLOUD_NAME = 'dojdniono'; // Your Cloudinary cloud name
+        const CLOUDINARY_UPLOAD_PRESET = 'scoop-video-upload'; // Your upload preset
+        const N8N_WEBHOOK_URL = 'https://thescoop.app.n8n.cloud/webhook/b3cff0b6-5895-426f-8814-db0368ce53df';
 
         function showStatus(message, type) {
             const statusDiv = document.getElementById('status');
@@ -186,71 +185,8 @@
                     const videoDuration = result.info.duration;
                     const videoFormat = result.info.format;
                     
-                    // Prepare message for Slack
-                    const slackMessage = {
-                        text: `🎥 New Video Upload: ${headline}`,
-                        blocks: [
-                            {
-                                type: "header",
-                                text: {
-                                    type: "plain_text",
-                                    text: urgency === 'breaking' ? "🚨 BREAKING VIDEO" : "📹 New Video Upload"
-                                }
-                            },
-                            {
-                                type: "section",
-                                fields: [
-                                    {
-                                        type: "mrkdwn",
-                                        text: `*Headline:*\n${headline}`
-                                    },
-                                    {
-                                        type: "mrkdwn",
-                                        text: `*Category:*\n${category}`
-                                    },
-                                    {
-                                        type: "mrkdwn",
-                                        text: `*Duration:*\n${Math.floor(videoDuration / 60)}:${(videoDuration % 60).toString().padStart(2, '0')}`
-                                    },
-                                    {
-                                        type: "mrkdwn",
-                                        text: `*Format:*\n${videoFormat.toUpperCase()}`
-                                    }
-                                ]
-                            }
-                        ]
-                    };
-
-                    if (notes) {
-                        slackMessage.blocks.push({
-                            type: "section",
-                            text: {
-                                type: "mrkdwn",
-                                text: `*Notes:*\n${notes}`
-                            }
-                        });
-                    }
-
-                    // Add video URL for n8n processing
-                    slackMessage.blocks.push({
-                        type: "section",
-                        text: {
-                            type: "mrkdwn",
-                            text: `*Video URL:*\n${videoUrl}`
-                        }
-                    });
-
-                    // Send to Slack
+                    // Send to n8n for processing
                     try {
-                        await fetch(SLACK_WEBHOOK_URL, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(slackMessage)
-                        });
-
-                        // Also trigger n8n directly
                         await fetch(N8N_WEBHOOK_URL, {
                             method: 'POST',
                             headers: {
@@ -263,23 +199,30 @@
                                 notes: notes,
                                 urgency: urgency,
                                 duration: videoDuration,
+                                format: videoFormat.toUpperCase(),
                                 uploadedAt: new Date().toISOString()
                             })
                         });
 
                         showStatus('✅ Video uploaded successfully! Processing will begin shortly.', 'success');
                         
-                        // Clear form
+                        // Clear form after successful upload
                         setTimeout(() => {
                             document.getElementById('headline').value = '';
                             document.getElementById('description').value = '';
                             document.getElementById('category').value = 'breaking';
                             document.getElementById('urgency').value = 'normal';
+                            
+                            // Hide success message after 5 seconds
+                            setTimeout(() => {
+                                const statusDiv = document.getElementById('status');
+                                statusDiv.style.display = 'none';
+                            }, 5000);
                         }, 2000);
 
                     } catch (err) {
-                        console.error('Error sending to Slack:', err);
-                        showStatus('Video uploaded but failed to notify Slack. URL: ' + videoUrl, 'error');
+                        console.error('Error sending to n8n:', err);
+                        showStatus('Video uploaded to cloud but failed to trigger processing. Video URL: ' + videoUrl, 'error');
                     }
                 }
             });
