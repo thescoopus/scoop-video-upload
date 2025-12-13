@@ -28,7 +28,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input, textarea, select {
+        input, textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -87,31 +87,11 @@
         </div>
 
         <div class="form-group">
-            <label for="category">Category</label>
-            <select id="category">
-                <option value="breaking">BREAKING NEWS</option>
-                <option value="politics">Politics</option>
-                <option value="crime">Crime/Violence</option>
-                <option value="economy">Economy</option>
-                <option value="culture">Culture War</option>
-            </select>
-        </div>
-
-        <div class="form-group">
             <label for="description">Additional Notes (optional)</label>
             <textarea 
                 id="description" 
                 placeholder="Any specific angles, quotes, or timestamps to highlight?"
             ></textarea>
-        </div>
-
-        <div class="form-group">
-            <label for="urgency">Urgency</label>
-            <select id="urgency">
-                <option value="normal">Normal</option>
-                <option value="urgent">Urgent</option>
-                <option value="breaking">BREAKING - Process Immediately</option>
-            </select>
         </div>
 
         <button onclick="openWidget()">📤 Select and Upload Video</button>
@@ -123,7 +103,7 @@
     <script>
         // Configuration
         const CLOUDINARY_CLOUD_NAME = 'dojdniono'; // Your Cloudinary cloud name
-        const CLOUDINARY_UPLOAD_PRESET = 'scoop-video-upload'; // Your upload preset
+        const CLOUDINARY_UPLOAD_PRESET = 'video-raw'; // New preset without transformations
         const N8N_WEBHOOK_URL = 'https://thescoop.app.n8n.cloud/webhook/2cd5f129-9794-4cc5-be01-f062224f5c7b';
 
         function showStatus(message, type) {
@@ -136,9 +116,7 @@
         function openWidget() {
             // Get form values
             const headline = document.getElementById('headline').value;
-            const category = document.getElementById('category').value;
             const notes = document.getElementById('description').value;
-            const urgency = document.getElementById('urgency').value;
 
             if (!headline) {
                 showStatus('Please enter a headline/description first!', 'error');
@@ -152,7 +130,7 @@
                 sources: ['local', 'url', 'google_drive', 'dropbox'],
                 multiple: false,
                 resourceType: 'video',
-                maxFileSize: 2147483648, // 2GB limit (exact)
+                maxFileSize: 5368709120, // 5GB limit
                 clientAllowedFormats: ['mp4', 'mov', 'avi', 'mkv'],
                 showPoweredBy: false,
                 styles: {
@@ -183,8 +161,7 @@
                     
                     const videoUrl = result.info.secure_url;
                     const videoDuration = result.info.duration;
-                    const videoFormat = result.info.format;
-                    
+
                     // Send to n8n for processing
                     try {
                         await fetch(N8N_WEBHOOK_URL, {
@@ -195,11 +172,8 @@
                             body: JSON.stringify({
                                 videoUrl: videoUrl,
                                 headline: headline,
-                                category: category,
                                 notes: notes,
-                                urgency: urgency,
                                 duration: videoDuration,
-                                format: videoFormat.toUpperCase(),
                                 uploadedAt: new Date().toISOString()
                             })
                         });
@@ -210,8 +184,6 @@
                         setTimeout(() => {
                             document.getElementById('headline').value = '';
                             document.getElementById('description').value = '';
-                            document.getElementById('category').value = 'breaking';
-                            document.getElementById('urgency').value = 'normal';
                             
                             // Hide success message after 5 seconds
                             setTimeout(() => {
